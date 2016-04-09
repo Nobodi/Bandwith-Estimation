@@ -1,9 +1,11 @@
 package icmp;
 
-public class Sniffer {
+public class Sniffer
+{
 
-	public Sniffer() {
-
+	public Sniffer()
+	{
+		System.out.println("Sniffer");
 	}
 
 }
