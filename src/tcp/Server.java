@@ -16,13 +16,12 @@ public class Server
 	private int packetSize;
 	private int clientTimeout;
 	private Logger logger;
-	private String clientIP;
 
 	public Server()
 	{
 		this.port = 2600;
 		this.packetSize = 1400;
-		this.clientTimeout = 20000;
+		this.clientTimeout = 8000;
 	}
 
 	public void initLogger() throws IOException
@@ -53,6 +52,8 @@ public class Server
 
 				// Set Timeout if Client is not able to response
 				client.setSoTimeout(clientTimeout);
+				client.setReceiveBufferSize(2);
+				client.setSendBufferSize(2);
 
 				ConnectionThread connection = new ConnectionThread(client,
 						logger, packetSize);
@@ -60,8 +61,9 @@ public class Server
 			}
 		} catch (SocketException e)
 		{
-			logger.error("Socket from " + clientIP
-					+ " interrupted. Error Message: " + e.getMessage());
+			logger.error("Server Socket interrupted. Error Message: "
+					+ e.getMessage());
+			System.out.println("SocketException: Problem mit Server Socket.");
 		} catch (IOException e)
 		{
 			logger.error("IO Error. " + e.getMessage());

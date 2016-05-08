@@ -7,7 +7,9 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 
 import org.apache.log4j.Logger;
 
@@ -18,6 +20,7 @@ public class ConnectionThread extends Thread
 	private double rate;
 	private int factor;
 	private int packetSize;
+	private int ptPackets;
 
 	public ConnectionThread(Socket client, Logger logger, int packetSize)
 	{
@@ -25,7 +28,7 @@ public class ConnectionThread extends Thread
 		this.logger = logger;
 		this.packetSize = packetSize;
 		this.rate = 0;
-		this.factor = 0;
+		this.factor = 500000;
 	}
 
 	@Override
@@ -34,7 +37,7 @@ public class ConnectionThread extends Thread
 		String clientIP = client.getInetAddress().getHostAddress();
 		System.out.println("Neue Verbindung " + clientIP);
 
-		logger.info("General: New Connection from " + clientIP + ".");
+		logger.info("Connection: New Connection from " + clientIP + ".");
 
 		try
 		{
@@ -60,21 +63,29 @@ public class ConnectionThread extends Thread
 
 					out.write(message + "\n");
 					out.flush();
-				} else if (line.equals("PacketTrain") || line.contains("Value"))
+				} else if (line.startsWith("PacketTrain")
+						|| line.startsWith("Value"))
 				{
-					if (line.equals("PacketTrain"))
+					if (line.startsWith("PacketTrain"))
 					{
+						this.packetSize = new Integer(line.substring(13,
+								line.length()));
+						this.ptPackets = new Integer(line.substring(11, 13));
+						System.out.println("Paketlaenge: " + this.packetSize);
+						System.out.println("Anzahl Pakete: " + this.ptPackets);
 						logger.info("PacketTrain requested from " + clientIP
 								+ ".");
 					}
-					if (line.contains("Value"))
+					if (line.startsWith("Value"))
 					{
 						int value = Integer.parseInt(line.substring(5,
 								line.length()));
-						// System.out.println("Value: " + value);
-						factor = factor + value;
+						System.out.println("Value: " + value);
+						factor = factor + (value * 10000);
+						System.out.println("Factor: " + factor);
 						if (factor < 0)
 						{
+							System.out.println("Bandbreite: " + rate);
 							factor = 0;
 						}
 					}
@@ -82,20 +93,27 @@ public class ConnectionThread extends Thread
 					Arrays.fill(a, 'x');
 					String message = new String(a);
 
-					long start, end = 0;
-					start = System.nanoTime();
+					long start = 0, end = 0, currentTime, referenceTime;
 
-					for (int i = 0; i < 20; i++)
+					ArrayList<Double> deltas = new ArrayList<Double>();
+					for (int i = 0; i < this.ptPackets; i++)
 					{
+						currentTime = System.nanoTime();
+						referenceTime = currentTime;
+						start = System.nanoTime();
 						out.write(message + System.nanoTime() + "\n");
 						out.flush();
-						Thread.sleep(factor);
-						if (i == 0)
+						// Timer
+						while ((currentTime - referenceTime) < factor)
 						{
-							end = System.nanoTime();
+							currentTime = System.nanoTime();
+							System.out.print("");
 						}
+						end = System.nanoTime();
+
+						deltas.add((end - start) / 1000000000.0);
 					}
-					double delta = (end - start) / 1000000000.0;
+					double delta = Collections.min(deltas);
 					// System.out.println("Delta: " + delta);
 					rate = (packetSize / (delta)) / 1000;
 					// System.out.println("Rate R: " + rate + "KB/s");
@@ -114,14 +132,17 @@ public class ConnectionThread extends Thread
 
 			client.close();
 			System.out.println("Verbindung mit " + clientIP + " beendet.");
-			logger.info("Connection with " + clientIP + " closed.");
+			logger.info("Connection: Connection with " + clientIP + " closed.");
 		} catch (SocketException e)
 		{
 			logger.error("Socket from " + clientIP
 					+ " interrupted. Error Message: " + e.getMessage());
+			System.out.println("SocketException: Verbindung unterbrochen.");
 		} catch (SocketTimeoutException e)
 		{
 			logger.error("Socket Timeout from " + clientIP + ".");
+			System.out
+					.println("SocketTimeoutException: Client antwortet nicht.");
 		} catch (InterruptedException e)
 		{
 			logger.error("Problem with Thread. Error Message: "
@@ -132,5 +153,4 @@ public class ConnectionThread extends Thread
 		}
 
 	}
-
 }

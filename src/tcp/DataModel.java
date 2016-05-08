@@ -2,25 +2,22 @@ package tcp;
 
 import java.util.ArrayList;
 
-import org.jnetpcap.packet.PcapPacket;
-
 public class DataModel
 {
-	public static int PACKETPAIR = 0;
-	public static int PACKETTRAIN = 1;
-	public static int GPING = 2;
-	public static int SPRUCE = 3;
+	public final static int PACKETPAIR = 0;
+	public final static int PACKETTRAIN = 1;
+	public final static int GPING = 2;
+	public final static int SPRUCE = 3;
+	public final static int RTT = 4;
+	public final static int DOWNLOAD = 5;
+	public final static int TEST = 10;
 
 	private String serverAddress;
-	private ArrayList<PcapPacket> packets;
-	private boolean stopThread;
 	private ArrayList<DataObject> bandwidths;
 
 	public DataModel(String serverAddress)
 	{
 		this.serverAddress = serverAddress;
-		this.packets = new ArrayList<PcapPacket>();
-		this.stopThread = false;
 		this.bandwidths = new ArrayList<DataObject>();
 	}
 
@@ -32,42 +29,6 @@ public class DataModel
 	public void setServerAddress(String serverAddress)
 	{
 		this.serverAddress = serverAddress;
-	}
-
-	public synchronized ArrayList<PcapPacket> getPackets()
-	{
-		try
-		{
-			wait();
-		} catch (InterruptedException e)
-		{
-			e.printStackTrace();
-		}
-		return packets;
-	}
-
-	public void setPackets(ArrayList<PcapPacket> packets)
-	{
-		this.packets = packets;
-	}
-
-	public synchronized void addPacket(PcapPacket packet)
-	{
-		this.packets.add(packet);
-		if (packets.size() >= 2)
-		{
-			notify();
-		}
-	}
-
-	public boolean isStopThread()
-	{
-		return stopThread;
-	}
-
-	public void setStopThread(boolean stopThread)
-	{
-		this.stopThread = stopThread;
 	}
 
 	public ArrayList<DataObject> getBandwidths()
